@@ -6,6 +6,10 @@ library(shinydashboard)
 library(lubridate)
 library(DT)
 library(dplyr)
+library(plotly)
+library(tidyverse)
+
+
 ui <- fluidPage(
   
   tabsetPanel(
@@ -37,7 +41,7 @@ ui <- fluidPage(
   DTOutput('tbl'),
   actionButton("tab", "See More")),
   tabPanel("Movies in selected Time",
-           titlePanel( paste0( "Selected time")),
+           uiOutput("titlet_layer2"),
            tabsetPanel(
              #wszystike filmy
              tabPanel("All films back then", dataTableOutput("all_film")), 
@@ -51,15 +55,15 @@ ui <- fluidPage(
 monnb <- function(d) { 
 lt <- as.POSIXlt(as.Date(d, origin="1900-01-01"))
 lt$year*12 + lt$mon } 
-
 dane <-  read.csv2("data_layer1.csv")
-
+dane2<-dane
+dane1<-select(dane,c(2,3,4,5))
 dane <- dane [,-1]
-
 dane$profit <- floor(dane$revenue/2.4 - dane$budget)
 dane <- dane[,c(5,6,3,2)]
+dane1$profit <- floor(dane1$revenue/2.4 - dane1$budget)
+dane1$release_date <- as.Date( dane1$release_date,"%d/%m/%Y")
 dane$release_date <- as.Date( dane$release_date,"%d/%m/%Y")
-
 
 server <- function(input, output, session) {
   
@@ -136,7 +140,7 @@ server <- function(input, output, session) {
             dane_button <- dane_button %>% arrange(desc(profit)) %>% slice(1:10)
             begin <-  as.Date((paste0(Buttons_n[i],"-01-01")),"%Y-%m-%d")
             end <- as.Date(paste0(Buttons_n[i],"-12-31"),"%Y-%m-%d")
-            print(begin)
+          
            
           }
           if (input$select == 1 ){
@@ -153,6 +157,33 @@ server <- function(input, output, session) {
             
           }
           
+          ## Data prepeing 
+     
+          dane1<-filter(dane1,release_date >= as.Date(begin))
+          dane1<-filter(dane1,release_date<= as.Date(end))
+          dane1<-aggregate(dane1$profit,by = list(Name=dane1$production_companies), FUN = sum)
+          dane1<-rename(dane1,value = x)
+          dane1<-arrange(dane1,desc(value))
+          dane1<-slice(dane1,1:10)#Można dać do N by wybierało n najmocniejszych firm
+          names2<-select(dane1,Name)
+          name<-unlist(names2,use.names = FALSE)
+          dane2$profit <- floor(dane2$revenue/2.4 - dane2$budget)
+          dane2$release_date <- as.Date( dane2$release_date,"%d/%m/%Y")
+          dane2<-filter(dane2,release_date >= as.Date(begin))
+          dane2<-filter(dane2,release_date<= as.Date(end))
+          dane2<-subset(dane2, production_companies %in% name)
+          names3<-add_column(names2,profit = 0,release_date = begin)
+          names2<-add_column(names2,profit = 0,release_date = end)
+          names4<-rbind(names2,names3)
+          names4$revenue<-NA
+          names4$title<-NA
+          names4$budget<-NA
+          names4$X<-NA
+          names4<-rename(names4,production_companies = Name)
+          dane2<-rbind(dane2,names4)
+          dane2<-arrange(dane2,release_date)
+          dane2<-group_by(dane2,production_companies)
+          dane2<-mutate(dane2,suma = cumsum(profit))
           
  
           # Prepering Month Selection
@@ -171,11 +202,11 @@ server <- function(input, output, session) {
               )
             )
           ))
-          
+          output$titlet_layer2 <- renderText({paste0("Time form ",as.character(begin)," to ",as.character(end))})
           output$tbl = renderDT(
             # Prepering tabel titel 
             
-     
+          
             
           datatable(dane_button, container = sketch, rownames = FALSE,filter = "none",options = list(dom = 't')))
           
@@ -210,6 +241,11 @@ server <- function(input, output, session) {
                 xaxis = list( title = "Release date")
               )
           )
+          output$prod<- renderPlotly({
+            plot_ly(dane2,x = ~release_date,y = ~suma, type = "scatter", mode = "lines",color =~production_companies ) %>%
+              layout(title = list(text="Całkowite przychody w okresie",x=0.4),
+                     xaxis = list(title = "Test"),
+                     yaxis = list(title = "Przychody $"))})
           
         })
       }
