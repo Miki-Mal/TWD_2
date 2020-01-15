@@ -7,7 +7,12 @@ library(lubridate)
 library(DT)
 library(dplyr)
 ui <- fluidPage(
-  titlePanel("Movie buissnes"),
+  
+  tabsetPanel(
+    id = "inTabset",
+
+  tabPanel("Movie business",
+           
   
   fluidRow(
     column(4,
@@ -30,8 +35,17 @@ ui <- fluidPage(
     uiOutput("go_buttons")
     ),
   DTOutput('tbl'),
-  shinydashboard::box(title = "See more", 
-                      shiny::actionButton(inputId='ab1', label="Dettalis", icon = icon("th")))
+  actionButton("tab", "See More")),
+  tabPanel("Movies in selected Time",
+           titlePanel( paste0( "Time period")),
+           tabsetPanel(
+             #wszystike filmy
+             tabPanel("All films back then", dataTableOutput("all_film")), 
+             #wykres premier i zarobków filmów
+             tabPanel("Flims box office", plotlyOutput("films_boxoffice")), 
+             #wykres zarobków producentów w danym czasie
+             tabPanel("Producers' earnings", plotlyOutput("prod"))
+           )))
   )
 # Month calculating Function 
 monnb <- function(d) { 
@@ -44,7 +58,7 @@ dane <- dane [,-1]
 
 dane$profit <- floor(dane$revenue/2.4 - dane$budget)
 dane <- dane[,c(5,6,3,2)]
-
+dane$release_date <- as.Date( dane$release_date,"%d/%m/%Y")i
 
 server <- function(input, output, session) {
   
@@ -62,6 +76,44 @@ server <- function(input, output, session) {
     begin_date <- paste0(begin_date,"-01")
     end_date <-  substring(date,14,20)
     end_date <- paste0(end_date,"-28")
+    
+    begin <- begin_date
+    end <- end_date
+    
+    
+    
+    data_period_r <- reactive({
+      dane %>%
+        arrange( desc( profit)) %>%
+        filter( release_date >= as.Date( begin) ) %>%
+        filter( release_date <= as.Date( end) )
+    })
+    #tabelka wzytskich filmów
+    output$all_film <- renderDataTable(
+      data_period_r(),
+      rownames = FALSE
+    )
+    #plotly premier i zarobków filmów
+    output$films_boxoffice <- renderPlotly(
+      plot_ly( data = data_period_r(), x = ~release_date, y = ~profit,
+               #TODO dodać linie (lolipop)
+               mode = 'markers', 
+               #TODO kolor do poprawy (może wytwórni)
+               marker = list( color = ~profit),
+               text = ~title,
+               #TODO dodać wytwórnie jeśli to możliwe
+               hovertemplate = paste('<b>%{text}</b><br>',
+                                     '<i>Profit</i>: $%{y}<br>',
+                                     '<i>Release date</i>: %{x}<br>'
+               )
+      ) %>%
+        layout(
+          #nazwy osi
+          yaxis = list( title = "Box office"),
+          xaxis = list( title = "Release date")
+        )
+    )
+    
     # Selecting data range and calculating buttons number by selected time step 
     # By Month 
     number_of_buttons <- 5
@@ -93,8 +145,11 @@ server <- function(input, output, session) {
         Buttons_n[i] <<- substring(as.character(d),1,4)
       }
     }
-    
-    
+    # Observer to change tab 
+    observeEvent(input$tab, {
+      updateTabsetPanel(session, "inTabset",
+                        selected = "Movies in selected Time")
+    })
     
     
     buttons <- as.list(1:number_of_buttons)
