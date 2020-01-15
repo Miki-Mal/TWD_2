@@ -37,7 +37,7 @@ ui <- fluidPage(
   DTOutput('tbl'),
   actionButton("tab", "See More")),
   tabPanel("Movies in selected Time",
-           titlePanel( paste0( "Time period")),
+           titlePanel( paste0( "Selected time")),
            tabsetPanel(
              #wszystike filmy
              tabPanel("All films back then", dataTableOutput("all_film")), 
@@ -58,7 +58,8 @@ dane <- dane [,-1]
 
 dane$profit <- floor(dane$revenue/2.4 - dane$budget)
 dane <- dane[,c(5,6,3,2)]
-dane$release_date <- as.Date( dane$release_date,"%d/%m/%Y")i
+dane$release_date <- as.Date( dane$release_date,"%d/%m/%Y")
+
 
 server <- function(input, output, session) {
   
@@ -69,53 +70,18 @@ server <- function(input, output, session) {
   output$go_buttons <- renderUI({
     
     
-    #Setting beggin and end date 
+    #Setting beggin and end date
     date <- (paste(as.character(input$daterange), collapse = " - "))
 
     begin_date <- (substring(date,1,7))
     begin_date <- paste0(begin_date,"-01")
     end_date <-  substring(date,14,20)
     end_date <- paste0(end_date,"-28")
-    
-    begin <- begin_date
-    end <- end_date
-    
-    
-    
-    data_period_r <- reactive({
-      dane %>%
-        arrange( desc( profit)) %>%
-        filter( release_date >= as.Date( begin) ) %>%
-        filter( release_date <= as.Date( end) )
-    })
-    #tabelka wzytskich filmów
-    output$all_film <- renderDataTable(
-      data_period_r(),
-      rownames = FALSE
-    )
-    #plotly premier i zarobków filmów
-    output$films_boxoffice <- renderPlotly(
-      plot_ly( data = data_period_r(), x = ~release_date, y = ~profit,
-               #TODO dodać linie (lolipop)
-               mode = 'markers', 
-               #TODO kolor do poprawy (może wytwórni)
-               marker = list( color = ~profit),
-               text = ~title,
-               #TODO dodać wytwórnie jeśli to możliwe
-               hovertemplate = paste('<b>%{text}</b><br>',
-                                     '<i>Profit</i>: $%{y}<br>',
-                                     '<i>Release date</i>: %{x}<br>'
-               )
-      ) %>%
-        layout(
-          #nazwy osi
-          yaxis = list( title = "Box office"),
-          xaxis = list( title = "Release date")
-        )
-    )
-    
     # Selecting data range and calculating buttons number by selected time step 
     # By Month 
+  
+    
+    
     number_of_buttons <- 5
     if (input$select== 1){
 
@@ -156,6 +122,7 @@ server <- function(input, output, session) {
     buttons <- lapply(buttons, function(i)
     {
       btName <- paste0("go_btn",i)
+      
       # creates an observer only if it doesn't already exists
       if (is.null(obsList[[btName]])) {
         
@@ -163,10 +130,13 @@ server <- function(input, output, session) {
         obsList[[btName]] <<- observeEvent(input[[btName]], {
           # Prepering Table to show 
           # For Year selection 
-          
+
           if (input$select == 2){
             dane_button <- dane %>% filter(Buttons_n[i]==as.character(year(as.Date(release_date,"%d/%m/%Y"))))
             dane_button <- dane_button %>% arrange(desc(profit)) %>% slice(1:10)
+            begin <-  as.Date((paste0(Buttons_n[i],"-01-01")),"%Y-%m-%d")
+            end <- as.Date(paste0(Buttons_n[i],"-12-31"),"%Y-%m-%d")
+            print(begin)
            
           }
           if (input$select == 1 ){
@@ -177,8 +147,13 @@ server <- function(input, output, session) {
             dane_button <- dane %>% filter(monnb(as.Date(release_date,"%d/%m/%Y"))==monnb(paste0(Buttons_n[i],"-01")))
             
             dane_button <- dane_button %>% arrange(desc(profit)) %>% slice(1:10)
+            begin <-  as.Date(paste0(Buttons_n[i],"-01"),"%Y-%m-%d")
+            end <- as.Date(paste0(Buttons_n[i],"-28"),"%Y-%m-%d")
+            
             
           }
+          
+          
  
           # Prepering Month Selection
           sketch <- htmltools::withTags(table(
@@ -203,6 +178,39 @@ server <- function(input, output, session) {
      
             
           datatable(dane_button, container = sketch, rownames = FALSE,filter = "none",options = list(dom = 't')))
+          
+          data_period_r <- reactive({
+            dane %>%
+              arrange( desc( profit)) %>%
+              filter( release_date >= as.Date( begin) ) %>%
+              filter( release_date <= as.Date( end) )
+          })
+          #tabelka wzytskich filmów
+          output$all_film <- renderDataTable(
+            data_period_r(),
+            rownames = FALSE
+          )
+          #plotly premier i zarobków filmów
+          output$films_boxoffice <- renderPlotly(
+            plot_ly( data = data_period_r(), x = ~release_date, y = ~profit,
+                     #TODO dodać linie (lolipop)
+                     mode = 'markers', 
+                     #TODO kolor do poprawy (może wytwórni)
+                     marker = list( color = ~profit),
+                     text = ~title,
+                     #TODO dodać wytwórnie jeśli to możliwe
+                     hovertemplate = paste('<b>%{text}</b><br>',
+                                           '<i>Profit</i>: $%{y}<br>',
+                                           '<i>Release date</i>: %{x}<br>'
+                     )
+            ) %>%
+              layout(
+                #nazwy osi
+                yaxis = list( title = "Box office"),
+                xaxis = list( title = "Release date")
+              )
+          )
+          
         })
       }
      
