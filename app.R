@@ -7,11 +7,7 @@ library(lubridate)
 library(DT)
 library(dplyr)
 library(plotly)
-<<<<<<< HEAD
-=======
 library(tidyverse)
-
->>>>>>> d901d3b0c6a94d7a2b7e3a6afd43fd3d90d0474b
 
 ui <- fluidPage(
   
@@ -224,9 +220,12 @@ server <- function(input, output, session) {
             data_period_r(),
             rownames = FALSE
           )
+          
+          
+          
           #plotly premier i zarobków filmów
           output$films_boxoffice <- renderPlotly(
-            plot_ly( data = data_period_r(), x = ~release_date, y = ~profit,
+            p <- plot_ly( data = data_period_r(), x = ~release_date, y = ~profit,
                      #TODO dodać linie (lolipop)
                      mode = 'markers', 
                      #TODO kolor do poprawy (może wytwórni)
@@ -242,13 +241,24 @@ server <- function(input, output, session) {
                 #nazwy osi
                 yaxis = list( title = "Box office"),
                 xaxis = list( title = "Release date")
-              )
+              ), 
+            if (TRUE){
+              p %>%
+              add_markers() %>%
+              add_text(textfont = t, textposition = "top right")%>%
+              layout(showlegend = FALSE)
+            }
           )
+          
+          
+          #producenci
           output$prod<- renderPlotly({
             plot_ly(dane2,x = ~release_date,y = ~suma, type = "scatter", mode = "lines",color =~production_companies ) %>%
               layout(title = list(text="Całkowite przychody w okresie",x=0.4),
                      xaxis = list(title = "Test"),
-                     yaxis = list(title = "Przychody $"))})
+                     yaxis = list(title = "Przychody $")
+                     ) 
+            })
           
         })
       }
