@@ -3,3 +3,5 @@ Mikołaj:
 Działa już okienko konkretnego czasu, Marcin zajmie się zrobieniem zarobków firm w tym okresie.
 Nazwałem je subapp.R.
 Uwagi: 1. dane dodatkowo zamiana release_date jako czas (as.Date), bo inaczej wykres się nie chce rysować i ogólem jest koszmar, 2. zmienne które przyjmuje to data początkowa i końcowa w starym formacie (yyyy-mm-dd)
+
+Wybór okresu: AllTime, niepotrzebne miesąc
