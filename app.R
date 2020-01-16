@@ -6,6 +6,8 @@ library(shinydashboard)
 library(lubridate)
 library(DT)
 library(dplyr)
+library(plotly)
+
 ui <- fluidPage(
   
   tabsetPanel(
