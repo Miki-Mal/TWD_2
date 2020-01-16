@@ -225,7 +225,7 @@ server <- function(input, output, session) {
           
           #plotly premier i zarobków filmów
           output$films_boxoffice <- renderPlotly(
-            p <- plot_ly( data = data_period_r(), x = ~release_date, y = ~profit,
+            plot_ly( data = data_period_r(), x = ~release_date, y = ~profit,
                      #TODO dodać linie (lolipop)
                      mode = 'markers', 
                      #TODO kolor do poprawy (może wytwórni)
@@ -241,13 +241,10 @@ server <- function(input, output, session) {
                 #nazwy osi
                 yaxis = list( title = "Box office"),
                 xaxis = list( title = "Release date")
-              ), 
-            if (TRUE){
-              p %>%
+              )  %>%
               add_markers() %>%
               add_text(textfont = t, textposition = "top right")%>%
               layout(showlegend = FALSE)
-            }
           )
           
           
